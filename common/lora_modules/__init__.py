@@ -23,6 +23,7 @@ Currently suppored LoRA variants are listed below:
 19. DeltaLoRA
 20. LoRA-FA
 21. IncreLoRA [IncreLoRA: Incremental Parameter Allocation Method for Parameter-Efficient Fine-tuning](https://arxiv.org/abs/2308.12043)
+22. RaLoRA
 """
 import contextlib
 from common.lora_modules.lora import *
@@ -37,6 +38,7 @@ from common.lora_modules.plora import *
 from common.lora_modules.adalora import *
 from common.lora_modules.gora import *
 from common.lora_modules.increlora import *
+from common.lora_modules.RaLoRA import *
 
 @contextlib.contextmanager
 def DisableLoRA(model):
