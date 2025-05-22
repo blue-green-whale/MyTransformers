@@ -94,7 +94,7 @@ class LinearWithRaLoRA(LinearWithLoRA):
             return result
         else:
             device = x.device
-            dtype = self.weight.dtype
+            dtype = self._get_lora_dtype()
             weight_a = self._diagonal_concat_weight_a().to(dtype=dtype, device=device)
             weight_b = self._diagonal_concat_weight_b().to(dtype=dtype, device=device)
             lora_result = F.linear(F.linear(self.lora_dropout(x), weight_a), weight_b).to(result.dtype)
