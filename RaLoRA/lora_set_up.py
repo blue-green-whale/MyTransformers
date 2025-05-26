@@ -1,10 +1,35 @@
 from argparse import Namespace
 
 from common.utils import print_rank_0
-from common.lora_modules import *
+from common.lora_modules.lora import *
+from common.lora_modules.dora import LinearWithDoRA
+from common.lora_modules.melora import LinearWithMELoRA
+from common.lora_modules.lora_ga import LinearWithLoRAGA
+from common.lora_modules.mos_lora import LinearWithMosLoRA
+from common.lora_modules.rslora import LinearWithRSLoRA
+from common.lora_modules.pissa import LinearWithPiSSA
+from common.lora_modules.olora import LinearWithOLoRA
+from common.lora_modules.vera import LinearWithVeRA
+from common.lora_modules.lora_moe import LinearWithLoRAMoE
+from common.lora_modules.milora import LinearWithMILoRA
+from common.lora_modules.delta_lora import LinearWithDeltaLoRA
+from common.lora_modules.adalora import LinearWithAdaLoRA
+from common.lora_modules.plora import LinearWithPLoRA
+from common.lora_modules.mora import LinearWithMoRA
+from common.lora_modules.gora import LinearWithGoRA
+from common.lora_modules.increlora import LinearWithIncreLoRA
+######################################改动#########################################
+from me_tdlora import LinearWithMETDLoRA
+from me_tdlora_monarch import LinearWithMETDMONARCHLoRA
+from me_tdlora_mixer import LinearWithMETDMIXERLoRA
+from me_tdlora_dynamic_n import LinearWithMETDDYNAMICNLoRA
+from me_tdlora_compress import LinearWithMETDCOMPRESSLoRA
+from me_tdlora_similarity import LinearWithMETDSIMILARITYLoRA
+from lora_ga_pro import LinearWithLoRAGAPro
+from dude import LinearWithDude
+######################################改动#########################################
 
 def get_lora_layer_class(args):
-    print(f"args.use_Ralora={args.use_Ralora}")
     variant_config = dict()
     variant_print = ""
     lora_layer_class = LinearWithLoRA
@@ -70,10 +95,60 @@ def get_lora_layer_class(args):
     elif getattr(args, 'use_increlora', False):
         lora_layer_class = LinearWithIncreLoRA
         variant_config = dict(init_r=args.init_r)
-    elif getattr(args, 'use_Ralora', False):
-        lora_layer_class = LinearWithRaLoRA
-        variant_config = dict(Ralora_dynamic_scaling=args.Ralora_dynamic_scaling,
-                                forward_method=args.Ralora_forward_method)
+    ###################改动###################
+    elif getattr(args, 'use_me_tdlora', False):
+        lora_layer_class = LinearWithMETDLoRA
+        variant_config = dict(tdlora_init_method=args.tdlora_init_method,
+                              tdlora_rank_stablize=args.tdlora_rank_stablize,
+                              tdlora_dynamic_scaling=args.tdlora_dynamic_scaling,
+                              me_lora_n_split=args.me_lora_n_split)
+    elif getattr(args, 'use_me_td_monarch_lora', False):
+        lora_layer_class = LinearWithMETDMONARCHLoRA
+        variant_config = dict(tdlora_init_method=args.tdlora_init_method,
+                              tdlora_rank_stablize=args.tdlora_rank_stablize,
+                              tdlora_dynamic_scaling=args.tdlora_dynamic_scaling,
+                              me_lora_n_split=args.me_lora_n_split)
+    elif getattr(args, 'use_me_td_mixer_lora', False):
+        lora_layer_class = LinearWithMETDMIXERLoRA
+        variant_config = dict(tdlora_init_method=args.tdlora_init_method,
+                              tdlora_rank_stablize=args.tdlora_rank_stablize,
+                              tdlora_dynamic_scaling=args.tdlora_dynamic_scaling,
+                              me_lora_n_split=args.me_lora_n_split,
+                              weight_ab_mixer_init_method=args.weight_ab_mixer_init_method)
+    elif getattr(args, 'use_me_td_dynamic_n_lora', False):
+        lora_layer_class = LinearWithMETDDYNAMICNLoRA
+        variant_config = dict(tdlora_init_method=args.tdlora_init_method,
+                                tdlora_rank_stablize=args.tdlora_rank_stablize,
+                                tdlora_dynamic_scaling=args.tdlora_dynamic_scaling,
+                                me_lora_n_split=args.me_lora_n_split,
+                                dynamic_n_allocation=args.dynamic_n_allocation,
+                                forward_method=args.me_lora_forward_method)
+    elif getattr(args, 'use_me_td_lora_compress', False):
+        lora_layer_class = LinearWithMETDCOMPRESSLoRA
+        variant_config = dict(tdlora_init_method=args.tdlora_init_method,
+                                tdlora_rank_stablize=args.tdlora_rank_stablize,
+                                tdlora_dynamic_scaling=args.tdlora_dynamic_scaling,
+                                me_lora_n_split=args.me_lora_n_split,
+                                dynamic_n_allocation=args.dynamic_n_allocation)
+    elif getattr(args, 'use_me_td_lora_similarity', False):
+        lora_layer_class = LinearWithMETDSIMILARITYLoRA
+        variant_config = dict(tdlora_init_method=args.tdlora_init_method,
+                                tdlora_rank_stablize=args.tdlora_rank_stablize,
+                                tdlora_dynamic_scaling=args.tdlora_dynamic_scaling,
+                                me_lora_n_split=args.me_lora_n_split,
+                                dynamic_n_allocation=args.dynamic_n_allocation)
+    ###################改动###################
+    ##############################lora-ga-pro##############################
+    elif getattr(args, 'use_lora_ga_pro', False):
+        lora_layer_class = LinearWithLoRAGAPro
+        variant_config = dict(rank_stablize=args.lora_ga_pro_rank_stablize,
+                              dynamic_scaling=args.lora_ga_pro_dynamic_scaling)
+    ##############################lora-ga-pro##############################
+    
+    #############################dude##############################
+    elif getattr(args, 'use_dude', False):
+        lora_layer_class = LinearWithDude
+        variant_config = dict(fast_svd_n_iters=args.pissa_n_iters)
     print_rank_0(f'--->Using lora variant: {lora_layer_class.__name__}{variant_print}', rank=args.global_rank)
     return lora_layer_class, variant_config
 
@@ -125,9 +200,13 @@ def switch_to_lora(model: nn.Module,
                         if quant:
                             lora_layer.weight_scaler = module.weight_scaler
                         # Manually init lora weights after read pretrianed weight.
-                        # If it is RaLoRA, do not initialize it first.
-                        if getattr(args, 'use_Ralora', False):
-                            lora_layer.init_Ralora_weights()
+                        # 如果是me_tdlora则先不初始化lora weight
+                        if getattr(args, 'use_me_tdlora', False) or getattr(args, 'use_me_td_monarch_lora', False)\
+                            or getattr(args, 'use_me_td_mixer_lora', False) or getattr(args, 'use_me_td_dynamic_n_lora', False) \
+                            or getattr(args, 'use_me_td_lora_compress', False) or getattr(args, 'use_me_td_lora_similarity', False):
+                            lora_layer.init_tdlora_weights()
+                        # elif getattr(args, 'use_lora_ga_pro', False):
+                        #     pass
                         else:
                             lora_layer.init_lora_weights()
                         # Replace the original layer with the LoRA layer.

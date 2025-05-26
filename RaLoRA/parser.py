@@ -197,8 +197,11 @@ def peft_parser(parser):
     group.add_argument('--use-me-lora', action='store_true',
                        help='Whether to use me lora')
     group.add_argument('--me-lora-n-split', type=int, default=2)
+    group.add_argument('--erank-max-power', type=int, default=None,
+                       help='2 to the power of n')
     group.add_argument('--me-lora-dynamic-scaling', action='store_true',
                        help='Whether scaling the lora by n')
+    group.add_argument('--me-lora-forward-method', type=str, default='for', choices=['for','einsum'])
     group.add_argument('--me-lora-usage',type=str, default='compress', choices=['compress','higher_rank'])
     group.add_argument('--lora-fa', action='store_true',
                        help='Whether to use LoRA FA')
@@ -280,20 +283,32 @@ def peft_parser(parser):
                        help='The dropout rate for lora weight.')
     group.add_argument('--run-lora-in-fp32', action='store_true',
                        help='Whether to keep lora weight in fp32.')
-######################################RaLoRA######################################
-    group.add_argument('--use-Ralora', action='store_true',
+    ###########################改动####################################
+    group.add_argument('--use-me-tdlora', action='store_true',
+                    help='Whether to use me_tdlora')
+    group.add_argument('--use-me-td-monarch-lora', action='store_true',
+                    help='Whether to use me_td_monarch_lora')
+    group.add_argument('--use-me-td-mixer-lora', action='store_true',
+                    help='Whether to use me_td_mixer_lora')
+    #################################################################
+    group.add_argument('--use-me-td-dynamic-n-lora', action='store_true',
                     help='Whether to use me_td_dynamic_n_lora')
-    group.add_argument('--Ralora-dynamic-scaling', action='store_true')
-    group.add_argument('--Ralora-importance-type', type=str, default='union_frobenius_norm')
-    group.add_argument('--Ralora-features-func', type=str, default=None)
-    group.add_argument('--Ralora-max-rank', type=int, default=9999)
-    group.add_argument('--Ralora-min-rank', type=int, default=1)
-    group.add_argument('--erank-max-power', type=int, default=None,
-                       help='2 to the power of n')
-    group.add_argument('--Ralora-n-steps', type=int, default=8,
-                       help='N steps for lora-ga to estimate full-rank gradient.')
-    group.add_argument('--Ralora-forward-method', type=str, default='for', choices=['for','einsum'])
-######################################RaLoRA######################################
+    group.add_argument('--use-me-td-lora-compress', action='store_true',
+                    help='Whether to use me_td_lora_compress')
+    group.add_argument('--dynamic-n-allocation', action='store_true',
+                    help='Whether to use dynamic n distribution')
+    group.add_argument('--allocation-method', type=str, default=None,
+                    help='Select the allocation method. For compress available method: [entropy sensitivity]For danamic. For dynamic_n available method [Fnorm sensitivity erank]')
+    #################################################################
+    group.add_argument('--use-me-td-lora-similarity', action='store_true',
+                    help='Whether to use me_td_lora_compress')
+    #################################################################
+    group.add_argument('--use-lora-ga-pro', action='store_true')
+    group.add_argument('--lora-ga-pro-rank-stablize', action='store_true')
+    group.add_argument('--lora-ga-pro-dynamic-scaling', action='store_true')
+    #################################################################
+    group.add_argument('--use-dude', action='store_true')
+    
     # --------------------------- galore ----------------------------------
     group.add_argument('--use-galore', action='store_true',
                        help='Whether to use Galore')
@@ -443,8 +458,11 @@ def get_args():
     print_rank_0(f"--->Using {args.ds_config_path} as deepspeed config path", args.global_rank)
         
     if args.params_to_save is not None:
+        print_rank_0(f"--->Parameters to save: {type(args.params_to_save)}", args.global_rank)
         if isinstance(args.params_to_save, str):
+            print_rank_0(f"--->Parameters to save: {type(args.params_to_save)}", args.global_rank)
             args.params_to_save = args.params_to_save.split('_')
+            print_rank_0(f"--->Parameters to save: {args.params_to_save}", args.global_rank)
         print_rank_0(f"--->Parameters to save: {args.params_to_save}", args.global_rank)
 
     if args.multimodal:

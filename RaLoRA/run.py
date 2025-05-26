@@ -15,8 +15,14 @@ from common.utils import set_random_seed, load_ckpt
 from common.utils.utils import set_default_tensor_type
 from common.utils import parallel_states as parallel_states
 
-from common.lora_modules import *
 from lora_set_up import switch_to_lora
+from me_tdlora import LinearWithMETDLoRA
+from me_tdlora_monarch import LinearWithMETDMONARCHLoRA
+from me_tdlora_mixer import LinearWithMETDMIXERLoRA
+from me_tdlora_dynamic_n import LinearWithMETDDYNAMICNLoRA
+from me_tdlora_compress import LinearWithMETDCOMPRESSLoRA
+from me_tdlora_similarity import LinearWithMETDSIMILARITYLoRA
+from lora_ga_pro import LinearWithLoRAGAPro
 
 from tqdm import tqdm
 from argparse import Namespace
@@ -72,7 +78,7 @@ def main(args):
         config_path = os.path.join(floder_path, 'config.json')
         with open(config_path, 'r') as f:
             training_config = json.load(f)
-        training_config['Ralora_forward_method'] = args.Ralora_forward_method
+        training_config['me_lora_forward_method'] = args.me_lora_forward_method
         training_config = Namespace(**training_config)
     
     else:
@@ -104,19 +110,45 @@ def main(args):
             load_ckpt(model=model.model, ckpt_path=args.pretrained_ckpt)
             print(f"loaded pretrained weight at{args.pretrained_ckpt}")
         if training_config.use_lora:
+            print("Replacing model with lora layers")
             switch_to_lora(model, 
             args=training_config)
-            if (hasattr(training_config, 'use_Ralora')):
+            if ((hasattr(training_config, 'use_me_tdlora')) and training_config.use_me_tdlora) or \
+                ((hasattr(training_config, 'use_me_td_monarch_lora')) and training_config.use_me_td_monarch_lora) or \
+                ((hasattr(training_config, 'use_me_td_mixer_lora')) and training_config.use_me_td_mixer_lora) :
                 rank_config_file = os.path.join(os.path.dirname(args.ckpt), 'rank.json')
                 rank_config = json.load(open(rank_config_file,'r'))
-                n_splits_file = os.path.join(os.path.dirname(args.ckpt), 'n_splits.json')
-                n_splits_config = json.load(open(n_splits_file, 'r'))
-                for name, module in model.model.named_modules():
-                    if isinstance(module, LinearWithRaLoRA):
+                for name,module in model.model.named_modules():
+                    if isinstance(module, LinearWithMETDLoRA) or isinstance(module, LinearWithMETDMONARCHLoRA) or isinstance(module, LinearWithMETDMIXERLoRA):
                         rank = rank_config[name]
-                        n_split = n_splits_config[name]
+                        module.init_method = 'vanilla'
+                        # module.melora_n_split = training_config.me_n_split
+                        module.dynamic_init(training_config.lora_rank, rank)
+            if (hasattr(training_config, 'use_me_td_dynamic_n_lora') and training_config.use_me_td_dynamic_n_lora) or \
+                ((hasattr(training_config, 'use_me_td_lora_compress')) and training_config.use_me_td_lora_compress) or \
+                    ((hasattr(training_config, 'use_me_td_lora_similarity')) and training_config.use_me_td_lora_similarity):
+                rank_config_file = os.path.join(os.path.dirname(args.ckpt), 'rank.json')
+                rank_config = json.load(open(rank_config_file,'r'))
+                if training_config.dynamic_n_allocation:
+                    n_splits_file = os.path.join(os.path.dirname(args.ckpt), 'n_splits.json')
+                    n_splits_config = json.load(open(n_splits_file, 'r'))
+                for name, module in model.model.named_modules():
+                    if isinstance(module, LinearWithMETDDYNAMICNLoRA) or isinstance(module, LinearWithMETDCOMPRESSLoRA) or isinstance(module, LinearWithMETDSIMILARITYLoRA):
+                        rank = rank_config[name]
+                        if training_config.dynamic_n_allocation:
+                            n_split = n_splits_config[name]
+                        else:
+                            n_split = training_config.me_lora_n_split
+                        module.init_method = 'vanilla'
                         module.dynamic_init(avg_rank=training_config.lora_rank, rank=rank, n_split=n_split)
-
+            if (hasattr(training_config, 'use_lora_ga_pro') and training_config.use_lora_ga_pro):
+                rank_config_file = os.path.join(os.path.dirname(args.ckpt), 'rank.json')
+                rank_config = json.load(open(rank_config_file, 'r'))
+                for name, module in model.model.named_modules():
+                    if isinstance(module, LinearWithLoRAGAPro):
+                        rank = rank_config[name]
+                        module.prepare_init(allocated_rank=rank)
+                        module.init_lora_weights()
         if args.ckpt is not None:
             load_ckpt(model=model.model, partial_ckpt_path=args.ckpt)
             print(f"loaded weight at{args.ckpt}")
@@ -239,7 +271,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("--result_path", type=str, default=None)
     parser.add_argument("--local_rank", type=int, default=0)
-    parser.add_argument('--Ralora-forward-method', type=str, default='for', choices=['for','einsum'])
+    parser.add_argument('--me-lora-forward-method', type=str, default='for', choices=['for','einsum'])
 
     args = parser.parse_args()
 

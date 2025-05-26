@@ -2,9 +2,23 @@ import os
 import torch
 import torch.distributed
 from datetime import datetime
-
+# import sys
+# sys.path.append('/ailab/user/hehaonan/workspace/MyTransformers/')
+# print(sys.path.)
 from model import *
-from common.lora_modules import *
+#################### import lora_modules ####################
+from common.lora_modules.lora import *
+from common.lora_modules.melora import *
+from common.lora_modules.lora_ga import *
+from common.lora_modules.mos_lora import *
+from common.lora_modules.dora import *
+from common.lora_modules.lorapro_optim import *
+from common.lora_modules.lora_moe import *
+from common.lora_modules.plora import * 
+from common.lora_modules.adalora import *
+from common.lora_modules.gora import *
+from common.lora_modules.increlora import *
+#################### import lora_modules ####################
 from train.trainer import Trainer
 # from common.parser import get_args
 from common.registry import registry
@@ -15,8 +29,18 @@ from train.load_model import load_model
 from dataset_classes import RepeatingLoader
 from common.utils.params_manager import refresh_config, set_up_trainable_param
 from common.utils import print_rank_0, read_config, set_random_seed, init_distributed_model
+########################################
 from parser import get_args
 from lora_set_up import *
+from me_tdlora import *
+from me_tdlora_monarch import *
+from me_tdlora_mixer import *
+from me_tdlora_dynamic_n import *
+from me_tdlora_compress import *
+from me_tdlora_similarity import *
+from lora_ga_pro import *
+from dude import *
+########################################
 
 args = get_args()
 args = registry.get_paths(args)
@@ -64,11 +88,41 @@ if args.use_gora:
                   dataloader=train_dataloader,
                   args=args,
                   iters=args.tdlora_n_steps)
-if args.use_Ralora:
-    RaLoRA_reinit(model=model,
-                dataloader=train_dataloader,
-                args=args,
-                iters=args.Ralora_n_steps)
+if args.use_me_tdlora:
+    metdlora_reinit(model=model,
+                  dataloader=train_dataloader,
+                  args=args,
+                  iters=args.tdlora_n_steps)
+if args.use_me_td_monarch_lora:
+    metd_monarch_lora_reinit(model=model,
+                  dataloader=train_dataloader,
+                  args=args,
+                  iters=args.tdlora_n_steps)
+if args.use_me_td_mixer_lora:
+    metdloramixer_reinit(model=model,
+                    dataloader=train_dataloader,
+                    args=args,
+                    iters=args.tdlora_n_steps)
+if args.use_me_td_dynamic_n_lora:
+    metdlora_dynamic_n_reinit(model=model,
+                    dataloader=train_dataloader,
+                    args=args,
+                    iters=args.tdlora_n_steps)
+if args.use_me_td_lora_compress:
+    metdlora_compress_reinit(model=model,
+                    dataloader=train_dataloader,
+                    args=args,
+                    iters=args.tdlora_n_steps)
+if args.use_me_td_lora_similarity:
+    metdlora_similarity_reinit(model=model,
+                    dataloader=train_dataloader,
+                    args=args,
+                    iters=args.tdlora_n_steps)
+if args.use_lora_ga_pro:
+    lora_ga_pro_reinit(model=model,
+                   dataloader=train_dataloader,
+                   args=args,
+                   iters=args.lora_ga_n_steps)
 
 if args.use_adalora:
     rank_allocator = RankAllocator(model, args)
