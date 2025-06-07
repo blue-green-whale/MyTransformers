@@ -38,7 +38,9 @@ from common.lora_modules.plora import *
 from common.lora_modules.adalora import *
 from common.lora_modules.gora import *
 from common.lora_modules.increlora import *
-from common.lora_modules.RaLoRA import *
+from common.lora_modules.dude import *
+from common.lora_modules.lora_ga_pro import *
+from common.lora_modules.goat import *
 
 @contextlib.contextmanager
 def DisableLoRA(model):

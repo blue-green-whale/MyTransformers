@@ -19,6 +19,9 @@ from common.lora_modules.mora import LinearWithMoRA
 from common.lora_modules.gora import LinearWithGoRA
 from common.lora_modules.increlora import LinearWithIncreLoRA
 from common.lora_modules.salora import LinearWithSALoRA
+from common.lora_modules.dude import LinearWithDude
+from common.lora_modules.lora_ga_pro import LinearWithLoRAGAPro
+from common.lora_modules.goat import LinearWithGOAT
 
 def get_lora_layer_class(args):
     variant_config = dict()
@@ -84,6 +87,24 @@ def get_lora_layer_class(args):
     elif getattr(args, 'use_salora', False):
         lora_layer_class = LinearWithSALoRA
         variant_config = dict(init_r=args.init_r, target_r=args.target_r)
+    elif getattr(args, 'use_lora_ga_pro', False):
+        lora_layer_class = LinearWithLoRAGAPro
+        variant_config = dict(rank_stablize=args.lora_ga_pro_rank_stablize,
+                              dynamic_scaling=args.lora_ga_pro_dynamic_scaling)
+    elif getattr(args, 'use_dude', False):
+        lora_layer_class = LinearWithDude
+        variant_config = dict(fast_svd_n_iters=args.pissa_n_iters)
+    elif getattr(args, 'use_goat', False):
+        lora_layer_class = LinearWithGOAT
+        variant_config = dict(scalling_type=args.goat_scaling_type,
+                              init_type=args.goat_init_type,
+                              num_experts=args.lora_moe_n_experts,
+                              top_k=args.lora_moe_top_k,
+                              rho=args.goat_rho,
+                              eta=args.goat_eta,
+                              init_cof=args.goat_init_cof)
+        variant_print = ". The initialization of GOAT requires some time, waiting..."
+    
     print_rank_0(f'--->Using lora variant: {lora_layer_class.__name__}{variant_print}', rank=args.global_rank)
     return lora_layer_class, variant_config
 

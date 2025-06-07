@@ -12,6 +12,14 @@ from common.lora_modules.adalora import update_and_allocate
 from common.lora_modules.delta_lora import LinearWithDeltaLoRA
 from common.lora_modules import LinearWithLoRA, LinearWithPLoRA, find_lora_names
 
+def get_aux_loss(args, model):
+    aux_loss = torch.tensor(0.0, device=args.device)
+    for module in model.modules():
+        if hasattr(module, 'layer_loss'):
+            if module.layer_loss is not None:
+                aux_loss += module.layer_loss.to(device=args.device, dtype=aux_loss.dtype)
+    return aux_loss
+
 def  forward_step_deepspeed(model: DeepSpeedEngine, data_loader: RepeatingLoader, args: Namespace, step: int):
     with torch.profiler.record_function("get_data"):
         batch = next(data_loader)
@@ -25,6 +33,9 @@ def  forward_step_deepspeed(model: DeepSpeedEngine, data_loader: RepeatingLoader
             metric = {}
         else:
             loss, metric = model(**batch)
+        if args.use_goat:
+            aux_loss = get_aux_loss(args, model)
+            loss += args.aux_loss_coeff * aux_loss.to(device=loss.device, dtype=loss.dtype)
 
         if args.all_reduce_loss:
             # Reduce loss for average loss print, not for backpropagation.
@@ -34,7 +45,7 @@ def  forward_step_deepspeed(model: DeepSpeedEngine, data_loader: RepeatingLoader
             del loss_reduced
             
         return loss, metric
-    
+
 def backward_step_deepspeed(model: DeepSpeedEngine, optimizer, loss, lr_scheduler, args, step):
     with record_function("backward_path"):
         model.backward(loss)
